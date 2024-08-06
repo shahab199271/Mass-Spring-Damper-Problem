@@ -1,0 +1,55 @@
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LSTM
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+
+# Generate data
+def generate_data(t_eval, num_samples=1000):
+    X = []
+    Y = []
+    for _ in range(num_samples):
+        m = np.random.uniform(0.5, 2.0)
+        c = np.random.uniform(0.1, 1.0)
+        k = np.random.uniform(1.0, 3.0)
+        solution = solve_ivp(mass_spring_damper, t_span, y0, t_eval=t_eval, args=(m, c, k))
+        X.append([m, c, k])
+        Y.append(solution.y[0])
+    return np.array(X), np.array(Y)
+
+# Prepare data
+X, Y = generate_data(t_eval)
+scaler_X = MinMaxScaler()
+scaler_Y = MinMaxScaler()
+X_scaled = scaler_X.fit_transform(X)
+Y_scaled = scaler_Y.fit_transform(Y)
+
+# Train-test split
+X_train, X_test, Y_train, Y_test = train_test_split(X_scaled, Y_scaled, test_size=0.2, random_state=42)
+
+# Define the model
+model = Sequential([
+    Dense(64, activation='relu', input_shape=(X_train.shape[1],)),
+    Dense(64, activation='relu'),
+    Dense(Y_train.shape[1])
+])
+
+model.compile(optimizer='adam', loss='mse')
+
+# Train the model
+history = model.fit(X_train, Y_train, epochs=100, validation_split=0.2, batch_size=32)
+
+# Evaluate the model
+loss = model.evaluate(X_test, Y_test)
+print(f'Test loss: {loss}')
+
+# Plot training history
+plt.figure(figsize=(10, 6))
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.title('Training History')
+plt.legend()
+plt.grid()
+plt.show()
